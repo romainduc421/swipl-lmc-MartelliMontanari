@@ -43,7 +43,7 @@ regle(X?=T,rename) :- var(X), var(T), !.
  * R : regle simplify.
  * Simplify {x ?= t}∪P′;S -> P′[x/t];S[x/t]∪{x=t} si t est une constante
  */
-regle(X?=A,simplify) :- var(X), atom(T), !.
+regle(X?=T,simplify) :- var(X), atomic(T), !.
 
 /*
  * Regle expand : renvoie true si X est une variable, T un terme
@@ -52,7 +52,7 @@ regle(X?=A,simplify) :- var(X), atom(T), !.
  * R : regle expand.
  * Expand {x ?= t}∪P′;S -> P′[x/t];S[x/t]∪{x=t} si t est composé et x n’apparaît pas dans t
  */	
-regle(X?=T,expand) :- var(X), compound(T), occur_check(X,T), !.
+regle(X?=T,expand) :- var(X), compound(T), \+occur_check(X,T), !.
 
 /*
  * Regle check : renvoie true si X et T sont differents et si X est dans
@@ -61,7 +61,7 @@ regle(X?=T,expand) :- var(X), compound(T), occur_check(X,T), !.
  * R : regle check.
  * Check {x?=t}∪P′;S->⊥ si x!=t et x apparaît dans t
  */	
-regle(X?=T,check) :- X\==T, \+occur_check(X,T), !.
+regle(X?=T,check) :- \+X==T, occur_check(X,T), !.
 
 /*
  * Regle orient : renvoie true si T n'est pas une variable et si X en
@@ -79,7 +79,7 @@ regle(T?=X,orient) :- nonvar(T), var(X), !.
  * R : regle decompose.
  * Decompose {f(s,···,s)?=f(t,···,t)}∪P′;S->{s?=t,···,s?=t}∪P′;S
  */	
-regle(X?=T,decompose) :- \+regle(X?=T,expand), !, functor(X,F1,A1), functor(T,F2,A2), F1==F2, A1==A2, !.
+regle(X?=T,decompose) :- compound(X), compound(T), functor(X,F1,A1), functor(T,F2,A2), F1==F2, A1==A2, !.
 
 /*
  * Regle clash : renvoie true si X et T sont des termes composes (n'ont pas le meme symbole) et
@@ -88,13 +88,11 @@ regle(X?=T,decompose) :- \+regle(X?=T,expand), !, functor(X,F1,A1), functor(T,F2
  * R : regle clash.
  * Clash {f(s,···,s)?=g(t,···,t)}∪P′;S->⊥ si f!=g ou m!=n
  */
-regle(X?=T,clash) :- compound(X), compound(T), functor(X,N,A), functor(T,M,B), (N \== M ; A \== B), !.
+regle(X?=T,clash) :- compound(X), compound(T), functor(X,N,A), functor(T,M,B), not( ( N==M , A==B ) ), !.
 
 % occur_check(V,T): teste si la variable V apparait dans le terme T
-occur_check(V,T) :- var(V),contains_var(V,T).  %non correct car va tester que pour des variables
-occur_check(V,T) :- var(T), !, V \== T, !.
-%compose
-occur_check(V,T) :- compound(T),arg(_,T,X),occur_check(V,X),!.
+occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,X), !;
+					var(V), compound(T), arg(_,T,X), V==X, !.
 
 % +----------------------------------------------------------------------------+
 %         ____                         _     _                     ___      
@@ -119,9 +117,9 @@ occur_check(V,T) :- compound(T),arg(_,T,X),occur_check(V,X),!.
 % +----------------------------------------------------------------------------+
 
 %appelle unifie apres avoir desactive les affichages
-unif(P, S) :- clr_echo, unifie(P, S).
+%unif(P, S) :- clr_echo, unifie(P, S).
 
 %appelle unifie apres avoir active les affichages, affiche "Yes" si on peut unifier "No" sinon (il n'y a donc pas d'echec de la procedure.
-trace_unif(P,S) :- set_echo, (unifie(P, S), echoln('Yes'), ! ;	
-		echo('No') ) .
+%trace_unif(P,S) :- set_echo, (unifie(P, S), echoln('Yes'), ! ;	
+%		echo('No') ) .
 %trace_unif(P, S) :- set_echo, unifie(P,S).
