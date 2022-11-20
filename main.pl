@@ -93,6 +93,62 @@ regle(X?=T,clash) :- compound(X), compound(T), functor(X,N,A), functor(T,M,B), n
 % occur_check(V,T): teste si la variable V apparait dans le terme T
 occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,X), !;
 					var(V), compound(T), arg(_,T,X), V==X, !.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% prédicats de réduction
+% reduit(R,E,P,Q) : transforme le système d'équations P en le système d'équations Q par application de la règle de transformation R à l'équation E
+reduit(rename, X ?= T, P, Q) :-
+	elimination(X ?= T, P, Q), 
+	!.
+
+
+reduit(expand, X ?= T, P, Q) :-
+	elimination(X ?= T, P,Q), 
+	!.
+
+
+reduit(simplify, X ?= T, P, Q) :-
+	elimination(X ?= T, P, Q), 
+	!.
+	
+
+elimination(X ?= T, P, Q) :-
+	X = T,	% Unification avec la nvelle valeur de X
+	Q = P, 	% Q devient le reste du programme
+	!.	
+
+
+reduit(decompose, Fonct1?= Fonct2, P, Q) :-
+	functor(Fonct1, _, A),		% recuperer le nombre d'arguments
+	decompose(Fonct1, Fonct2, A, Liste), % recuperer les nouvelles eq
+	append(Liste,P,Q), % ajout des eq dans le prog P
+	!.		
+	
+decompose(_,_,0,_) :-
+	!.
+decompose(Fonct1, Fonct2, A, Liste) :-
+	% on decremente le no de l'argument parcouru
+	New is A - 1,		
+	% ajout de l'equation liee au (i-1) -ieme argument
+	decompose(Fonct1, Fonct2, New, Res),
+	% obtention de l'argument courant pour les deux fct
+	arg(A, Fonct1, Arg1),
+	arg(A, Fonct2, Arg2),
+	% ajout de l'eq arg1 ?= arg2
+	append(Res, [Arg1 ?= Arg2], Liste), 
+	!.
+
+
+reduit(orient, X ?= T, P, Q) :-
+	% ajout de l'equation inversee dans P
+	append([X ?= T], P, Q), !.
+	
+% facultatifs (systeme dequation est incorrect)
+%occurence
+reduit(check, _, _, bottom).
+%gestion de conflits
+reduit(clash, _, _, bottom).
+	
+
 
 % +----------------------------------------------------------------------------+
 %         ____                         _     _                     ___      
