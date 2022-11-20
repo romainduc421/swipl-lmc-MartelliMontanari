@@ -138,7 +138,7 @@ decompose(Fonct1, Fonct2, A, Liste) :-
 	!.
 
 
-reduit(orient, X ?= T, P, Q) :-
+reduit(orient, T ?= X, P, Q) :-
 	% ajout de l'equation inversee dans P
 	append([X ?= T], P, Q), !.
 	

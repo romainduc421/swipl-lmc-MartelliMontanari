@@ -151,10 +151,10 @@ Q = bottom.
 
 %orient
 ?- reduit(orient, t ?= X, [f(X) ?= X], Q).
-Q = [t?=X, f(X)?=X].
+Q = [X?=t, f(X)?=X].
 
 ?- reduit(orient, t ?= X, [], Q).
-Q = [t?=X].
+Q = [X?=t].
 
 %clash
 ?- reduit(clash, f(t) ?= f(X, m), [], Q).
