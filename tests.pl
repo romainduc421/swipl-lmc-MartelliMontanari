@@ -173,5 +173,11 @@ Q = [t?=X, f(X)?=X].
 ?- reduit(decompose, f(t, C, X) ?= f(X, k, Y), [], Q).
 Q = [t?=X, C?=k, X?=Y].
 
+%% tests unifie
+?- unifie([f(X,Y) ?= f(g(Z),h(a)), Z ?= f(Y)]).
+X = g(f(h(a))),
+Y = h(a),
+Z = f(h(a)).
+
 
 
