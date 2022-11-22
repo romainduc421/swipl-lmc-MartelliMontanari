@@ -15,6 +15,8 @@ clr_echo :- retractall(echo_on).
 echo(T) :- echo_on, !, write(T).
 echo(_).
 
+:- set_echo.
+
 % +----------------------------------------------------------------------------+
 %         ____                         _     _                     __     
 %        / __ \                       | |   (_)                   /_ |  _ 
@@ -165,10 +167,13 @@ reduit(clash, _, _, bottom).
 % Predicats pour unifier
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-unifie([]) .
+unifie([]) :- echo("\nYes"),!.
 unifie([X|P]) :-
-	\+regle(X, clash), \+regle(X, check),
-	reduit(_,X,P,Q), !, unifie(Q).
+	aff_syst([X|P]),
+	regle(X,R),
+	aff_regle(R,X),
+	reduit(R,X,P,Q), !, unifie(Q).
+
 
 
 % +----------------------------------------------------------------------------+
@@ -188,3 +193,8 @@ unifie([X|P]) :-
 %trace_unif(P,S) :- set_echo, (unifie(P, S), echoln('Yes'), ! ;	
 %		echo('No') ) .
 %trace_unif(P, S) :- set_echo, unifie(P,S).
+
+
+% PREDICATS POUR L AFFICHAGE
+aff_syst(W) :- echo('system: '),echo(W),echo('\n').
+aff_regle(R,E) :- echo(R),echo(': '),echo(E),echo('\n').
