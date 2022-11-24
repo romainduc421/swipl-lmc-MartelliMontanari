@@ -98,6 +98,7 @@ occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % prédicats de réduction
 % reduit(R,E,P,Q) : transforme le système d'équations P en le système d'équations Q par application de la règle de transformation R à l'équation E
+% E est représenté par X ?= T.
 reduit(rename, X ?= T, P, Q) :-
 	elimination(X ?= T, P, Q), 
 	!.
@@ -114,7 +115,7 @@ reduit(simplify, X ?= T, P, Q) :-
 	
 
 elimination(X ?= T, P, Q) :-
-	X = T,	% Unification avec la nvelle valeur de X
+	X = T,	% Unification avec la nouvelle valeur de X
 	Q = P, 	% Q devient le reste du programme
 	!.	
 
@@ -146,11 +147,17 @@ reduit(orient, T ?= X, P, Q) :-
 	
 % facultatifs (systeme dequation est incorrect)
 %occurence
-reduit(check, _, _, bottom).
+reduit(check, _, _, bottom) :- fail.
 %gestion de conflits
-reduit(clash, _, _, bottom).
-	
+reduit(clash, _, _, bottom) :- fail.
 
+% Predicat unifie(P)
+unifie([]) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
+unifie([X|P]) :-
+	aff_syst([X|P]),
+	regle(X,R),
+	aff_regle(R,X),
+	reduit(R,X,P,Q), !, unifie(Q).
 
 
 % +----------------------------------------------------------------------------+
@@ -163,17 +170,34 @@ reduit(clash, _, _, bottom).
 %		                                                                     
 % +----------------------------------------------------------------------------+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Predicats de choix(P, Q, E, R)
+% Choisit dans le système P une équation E avec sa règle correspondante R
+% et l'extrait de P pour donner le système Q.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats pour unifier
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-unifie([]) :- echo("\nYes"),!.
-unifie([X|P]) :-
-	aff_syst([X|P]),
-	regle(X,R),
-	aff_regle(R,X),
-	reduit(R,X,P,Q), !, unifie(Q).
+unifie([X|P],choix_premier):- unifie([X|P]).
 
+%unifie([X|P],choix_pondere_1) :-
+%	aff_syst([X|P]), %affichage du systeme
+
+	%Choisir regle a appliquer
+	
+    %Parcourir les equations de X
+	%choix_regle() 
+	%Pour chaque equations, choix_regle %=> Donne le poids le plus petit applicable a l'equation
+	%On prends l'équation E qui a la regle R avec le poids le plus petit
+
+	%aff_regle(R,E) %affichage de la regle
+	%reduit(R,E,P,Q), !, unifie(Q,choix_pondere_1). % Application de la regle + recursion
+unifie([], _ ):- echo('Unification terminee.')
 
 
 % +----------------------------------------------------------------------------+
@@ -187,14 +211,27 @@ unifie([X|P]) :-
 % +----------------------------------------------------------------------------+
 
 %appelle unifie apres avoir desactive les affichages
-%unif(P, S) :- clr_echo, unifie(P, S).
+unif(P, S) :- clr_echo, unifie(P, S).
 
 %appelle unifie apres avoir active les affichages, affiche "Yes" si on peut unifier "No" sinon (il n'y a donc pas d'echec de la procedure.
-%trace_unif(P,S) :- set_echo, (unifie(P, S), echoln('Yes'), ! ;	
-%		echo('No') ) .
-%trace_unif(P, S) :- set_echo, unifie(P,S).
+trace_unif(P,S) :- set_echo, (unifie(P, S), echo('Yes'), ! ;	
+		echo('No') ) .
+trace_unif(P, S) :- set_echo, unifie(P,S).
 
 
 % PREDICATS POUR L AFFICHAGE
-aff_syst(W) :- echo('system: '),echo(W),echo('\n').
-aff_regle(R,E) :- echo(R),echo(': '),echo(E),echo('\n').
+aff_syst(W) :- echo('\nsystem: '),echo(W),echo('\n').
+aff_regle(R,E) :- echo(R),echo(': '),echo(E),echo('\n\n').
+
+% +----------------------------------------------------------------------------+
+% Lancement du programme
+
+:- initialization manual.
+manual :- write("Unification Martelli-Montanari\n"),
+		write("\n\nUtilisez trace_unif(P,S) pour executer l algorithme de Martelli-Montanari avec les traces d execution a chaque etape."),
+		write("\nUtilisez unif(P,S) pour executer l algorithme de Martelli-Montanari sans les traces d execution."),
+		write("\nP est le systeme a unifier. S represente une strategie a employer: choix_premier, choix_pondere_1, choix_pondere_2."),
+		set_echo.
+
+
+
