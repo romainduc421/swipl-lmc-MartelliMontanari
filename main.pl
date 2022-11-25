@@ -172,33 +172,79 @@ unifie([X|P]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Predicats de choix(P, Q, E, R)
-% Choisit dans le système P une équation E avec sa règle correspondante R
-% et l'extrait de P pour donner le système Q.
+% Choix_pondere_1
+% Poids des regles
+% clash; check > rename; simplify > orient > decompose > expand
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%Définition du poids des différentes règles
+poids(clash, 7).
+poids(check, 7).
+poids(rename, 5).
+poids(simplify, 5).
+poids(orient, 3).
+poids(decompose, 2).
+poids(expand, 1).
 
+%Effectue l'algorithme d'unification suivant les règles prioritaire définie plus haut
+choix_pondere_1(X) :-
+	aff_syst(X),
+	poids_max(X, R, E),
+	extraction(X, E, S),
+	aff_regle(R,X),
+	reduit(R, E, S, Q),
+	choix_pondere_1(Q).
+%Lorsque le systeme P est vide, on a terminé l'unification
+choix_pondere_1([]) :-
+	echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
+
+% Poids max
+% Ce predicat compare deux à deux les premieres equations (X et Y) du systeme P et garde celle dont la règle est prioritaire
+% L'equation prioritaire est celle dont le poids (W1/W2) est le plus grand.
+poids_max([X,Y|P], R, E) :-
+        regle(X,R1),
+        poids(R1,W1),
+        regle(Y,R2),
+        poids(R2,W2),
+        W1>=W2, %Si X est prioritaire
+        !,
+	poids_max([X|P], R, E).
+poids_max([X,Y|P], R, E) :-
+        regle(X,R1),
+        poids(R1,W1),
+        regle(Y,R2),
+        poids(R2,W2),
+		W1=<W2, %Si Y est prioritaire
+        !,
+	poids_max([Y|P], R, E).
+%Condition de fin; il ne reste plus qu'un élément
+poids_max([X],R,X) :-
+	regle(X,R),
+	!.
+
+
+
+% extraction(P,X,S)
+% Permet d'extraire l'equation X du systeme P (sous forme de liste [H|T])
+% S est le nouveau systeme sans X
+extraction([H|T],X,S) :-
+	X == H, %Si la premiere equation (Head) est X 
+	S = T, %On l'extrait du systeme R
+	!.
+%Si la première equation n'est pas X, on teste le reste de la liste (Tail)
+extraction([H|T],X,S) :-
+	X \== H,
+	extraction(T,X,S).
+extraction([],_,[]) :- !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats pour unifier
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-unifie([X|P],choix_premier):- unifie([X|P]).
+unifie([X|P],choix_premier):- unifie([X|P]), !.
 
-%unifie([X|P],choix_pondere_1) :-
-%	aff_syst([X|P]), %affichage du systeme
-
-	%Choisir regle a appliquer
-	
-    %Parcourir les equations de X
-	%choix_regle() 
-	%Pour chaque equations, choix_regle %=> Donne le poids le plus petit applicable a l'equation
-	%On prends l'équation E qui a la regle R avec le poids le plus petit
-
-	%aff_regle(R,E) %affichage de la regle
-	%reduit(R,E,P,Q), !, unifie(Q,choix_pondere_1). % Application de la regle + recursion
-unifie([], _ ):- echo('Unification terminee.')
-
+unifie([X|P],choix_pondere_1) :-
+	choix_pondere_1([X|P]), !.
 
 % +----------------------------------------------------------------------------+
 %         ____                         _     _                     ____      
@@ -210,7 +256,7 @@ unifie([], _ ):- echo('Unification terminee.')
 %		                                                                      
 % +----------------------------------------------------------------------------+
 
-%appelle unifie apres avoir desactive les affichages
+%appelle unifie apres avoir desactive les affichages 
 unif(P, S) :- clr_echo, unifie(P, S).
 
 %appelle unifie apres avoir active les affichages, affiche "Yes" si on peut unifier "No" sinon (il n'y a donc pas d'echec de la procedure.
@@ -225,13 +271,15 @@ aff_regle(R,E) :- echo(R),echo(': '),echo(E),echo('\n\n').
 
 % +----------------------------------------------------------------------------+
 % Lancement du programme
+:- initialization
+        manual.
 
-:- initialization manual.
+
 manual :- write("Unification Martelli-Montanari\n"),
 		write("\n\nUtilisez trace_unif(P,S) pour executer l algorithme de Martelli-Montanari avec les traces d execution a chaque etape."),
 		write("\nUtilisez unif(P,S) pour executer l algorithme de Martelli-Montanari sans les traces d execution."),
 		write("\nP est le systeme a unifier. S represente une strategie a employer: choix_premier, choix_pondere_1, choix_pondere_2."),
-		set_echo.
+		set_echo, !.
 
 
 
