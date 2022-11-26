@@ -181,30 +181,36 @@ unifie([X|P]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats annexes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Permet d'extraire un element d'une liste.
 extraction( _, [], []).
 extraction( R, [R|T], T).
 extraction( R, [H|T], [H|T2]) :- H \= R, extraction( R, T, T2).
 
+% Permet de tester l'applicabilité des regles de la liste "Regles" sur l'equation X.
+% R1 est le premier element de la liste "Regles"
+regle_applicable(X, [R1|Regles], R) :- regle(X,R1), R = R1, !.
+regle_applicable(X, [R1|Regles], R) :- regle_applicable(X, Regles, R), !.
 
-test_regle(X, [R1|Rules], R) :- regle(X,R1), R = R1, !.
-test_regle(X, [R1|Rules], R) :- test_regle(X, Rules, R), !.
-
-choix_elt_regle([X|P],Q,E,[R1|Rules],R):-
-	test_regle(X, [R1|Rules], R), E = X, !.
-choix_elt_regle([X|P], Q, E,[R1|Rules],R) :-
-	choix_elt_regle(P, Q, E,[R1|Rules],R), !.
+% Permet de choisir sur quelle equation appliquer les regles dans la liste Regles
+choix_equation([X|P],Q,E,[R1|Regles],R):-
+	regle_applicable(X, [R1|Regles], R), E = X, !.
+choix_equation([X|P], Q, E,[R1|Regles],R) :-
+	choix_equation(P, Q, E,[R1|Regles],R), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Choix_pondere_1
-% Poids des regles
+% Liste des "Strategies"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Choix_pondere_1 (Exemple du sujet)
+% Poids des regles 
 % clash; check > rename; simplify > orient > decompose > expand
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-choix(choix_pondere_1, P,Q,E,R) :- choix_elt_regle(P, Q, E, [check, clash], R), !.
-choix(choix_pondere_1, P,Q,E,R) :- choix_elt_regle(P, Q, E, [decompose], R), !.
-choix(choix_pondere_1, P,Q,E,R) :- choix_elt_regle(P, Q, E, [rename, simplify], R), !.
-choix(choix_pondere_1, P,Q,E,R) :- choix_elt_regle(P, Q, E, [orient], R), !.
-choix(choix_pondere_1, P,Q,E,R) :- choix_elt_regle(P, Q, E, [expand], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [check, clash], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [decompose], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [rename, simplify], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [orient], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Choix_pondere_2
@@ -212,26 +218,28 @@ choix(choix_pondere_1, P,Q,E,R) :- choix_elt_regle(P, Q, E, [expand], R), !.
 % clash; check > decompose; simplify > orient; expand > rename
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-choix(choix_pondere_2, P,Q,E,R) :- choix_elt_regle(P, Q, E, [check, clash], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_elt_regle(P, Q, E, [decompose, simplify], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_elt_regle(P, Q, E, [orient,expand], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_elt_regle(P, Q, E, [rename], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [check, clash], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [decompose, simplify], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [orient,expand], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename], R), !.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats pour unifier
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% choix_premier, aucun poids sur les regles
 unifie([X|P],choix_premier):- unifie([X|P]), !.
 
+% Applique la strategie S pour l'algorithme
 unifie(P,S) :-
-	aff_syst(P),
-	choix(S, P, Q, E, R),
-	aff_regle(R,E),
-	regle(E,R),
-	extraction(E, P, U),
-	reduit(R,E,U,Q),
-	unifie(Q, S), 
+	aff_syst(P), %On affiche le systeme
+	choix(S, P, Q, E, R), %On effectue le choix de la regle a appliquer + sur quelle equation
+	aff_regle(R,E), %On affiche la regle utilisee.
+	regle(E,R), %On applique la regle.
+	extraction(E, P, U), %On extrait l'element
+	reduit(R,E,U,Q), %On applique reduit
+	unifie(Q, S),  %Recursion
 	!.
 
 % +----------------------------------------------------------------------------+
@@ -249,7 +257,8 @@ unif(P, S) :- clr_echo, unifie(P, S).
 
 %appelle unifie apres avoir active les affichages, affiche "Yes" si on peut unifier "No" sinon (il n'y a donc pas d'echec de la procedure.
 trace_unif(P, S) :- set_echo, unifie(P,S).
-
+trace_unif(P,S) :- set_echo, (unifie(P, S), echo('Yes'), ! ;	
+		echo('No') ) .
 
 % PREDICATS POUR L AFFICHAGE
 aff_syst(W) :- echo('\nSystem: '),echo(W),echo('\n').
