@@ -15,6 +15,9 @@ clr_echo :- retractall(echo_on).
 echo(T) :- echo_on, !, write(T).
 echo(_).
 
+echoln(T) :- echo_on, echo(T), nl.
+echoln(_).
+
 :- set_echo.
 
 % Retire les warnings
@@ -34,6 +37,7 @@ echo(_).
 %%----- Def des conditions sur les regles -----%
 
 /*
+ * Renommage d une variable
  * Regle rename : renvoie true si X et T sont des variables.
  * E : equation donnee.
  * R : regle rename.
@@ -42,6 +46,7 @@ echo(_).
 regle(X?=T,rename) :- var(X), var(T), !.
 	 
 /*
+ * Simplification de constante
  * Regle simplify : renvoie true si X est une variable et A une
  * constante.
  * E : equation donnee.
@@ -51,6 +56,7 @@ regle(X?=T,rename) :- var(X), var(T), !.
 regle(X?=T,simplify) :- var(X), atomic(T), !.
 
 /*
+ * Unification d'une variable avec un terme compose
  * Regle expand : renvoie true si X est une variable, T un terme
  * compose et si X n'est pas dans T.
  * E : equation donnee.
@@ -60,6 +66,7 @@ regle(X?=T,simplify) :- var(X), atomic(T), !.
 regle(X?=T,expand) :- var(X), compound(T), \+occur_check(X,T), !.
 
 /*
+ * Verification de presence d occurrence
  * Regle check : renvoie true si X et T sont differents et si X est dans
  * T.
  * E : equation donnee.
@@ -69,6 +76,7 @@ regle(X?=T,expand) :- var(X), compound(T), \+occur_check(X,T), !.
 regle(X?=T,check) :- \+X==T, occur_check(X,T), !.
 
 /*
+ * Echange
  * Regle orient : renvoie true si T n'est pas une variable et si X en
  * est une.
  * E : equation donnee.
@@ -78,6 +86,7 @@ regle(X?=T,check) :- \+X==T, occur_check(X,T), !.
 regle(T?=X,orient) :- nonvar(T), var(X), !.
 
 /*
+ * Decomposition de deux fonctions
  * Regle decompose : renvoie true si X et T sont des termes composes et
  * s'ils ont le meme nombre d'arguments et le meme nom.
  * E : equation donnee.
@@ -87,6 +96,7 @@ regle(T?=X,orient) :- nonvar(T), var(X), !.
 regle(X?=T,decompose) :- compound(X), compound(T), functor(X,F1,A1), functor(T,F2,A2), F1==F2, A1==A2, !.
 
 /*
+ * Gestion de conflit entre deux fonctions
  * Regle clash : renvoie true si X et T sont des termes composes (n'ont pas le meme symbole) et
  * s'ils n'ont pas le meme nombre d'arguments.
  * E : equation donnee.
@@ -105,35 +115,43 @@ occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,
 
 % reduit(R,E,P,Q) : transforme le système d'équations P en le système d'équations Q par application de la règle de transformation R à l'équation E
 % E est représenté par X ?= T.
+
+% Predicat reduit pour la regle rename
 reduit(rename, X ?= T, P, Q) :-
 	elimination(X ?= T, P, Q), 
 	!.
 
-
+% Predicat reduit pour la regle expand
 reduit(expand, X ?= T, P, Q) :-
 	elimination(X ?= T, P,Q), 
 	!.
 
 
+% Predicat reduit pour la regle simplify
 reduit(simplify, X ?= T, P, Q) :-
 	elimination(X ?= T, P, Q), 
 	!.
 	
-
+% Predicat elimination permettant d appliquer l unification necessaire
+% aux regles rename, expand, simplify
 elimination(X ?= T, P, Q) :-
 	X = T,	% Unification avec la nouvelle valeur de X
 	Q = P, 	% Q devient le reste du programme
 	!.	
 
-
+% Predicat reduit permettant d'appliquer la regle de decomposition de deux fonctions sur l equation E
 reduit(decompose, Fonct1?= Fonct2, P, Q) :-
 	functor(Fonct1, _, A),		% recuperer le nombre d'arguments
 	decompose(Fonct1, Fonct2, A, Liste), % recuperer les nouvelles eq
 	append(Liste,P,Q), % ajout des eq dans le prog P
 	!.		
-	
+
+% Predicat de decomposition, cas où l'argument des 2 fct 
+% parcourues est 0 (arrêt de la récursion)	
 decompose(_,_,0,_) :-
 	!.
+% Predicat de decomposition, on prend deux fct et on recupere le 
+% ieme argument afin d ajouter l equation Arg1 ?= Arg2 au programme
 decompose(Fonct1, Fonct2, A, Liste) :-
 	% on decremente le no de l'argument parcouru
 	New is A - 1,		
@@ -146,7 +164,8 @@ decompose(Fonct1, Fonct2, A, Liste) :-
 	append(Res, [Arg1 ?= Arg2], Liste), 
 	!.
 
-
+% Predicat reduit pour la regle orient, le predicat prend l equation E et l inverse
+% puis l ajoute au programme P, le resultat est alors stocke dans Q
 reduit(orient, T ?= X, P, Q) :-
 	% ajout de l'equation inversee dans P
 	append([X ?= T], P, Q), !.
@@ -158,8 +177,9 @@ reduit(check, _, _, bottom) :- fail.
 reduit(clash, _, _, bottom) :- fail.
 
 % Predicat unifie(P)
+% % Unifie sans stratégie (Question 1)
 unifie([]) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
-unifie([],_) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
+
 unifie([X|P]) :-
 	aff_syst([X|P]),
 	regle(X,R),
@@ -188,6 +208,7 @@ extraction( R, [R|T], T).
 extraction( R, [H|T], [H|T2]) :- H \= R, extraction( R, T, T2).
 
 % Permet de tester l'applicabilité des regles de la liste "Regles" sur l'equation X.
+% Cherche la regle R que l'on peut appliquer dans une liste de regles Regles a une liste d'equations d'unification X
 % R1 est le premier element de la liste "Regles"
 regle_applicable(X, [R1|Regles], R) :- regle(X,R1), R = R1, !.
 regle_applicable(X, [R1|Regles], R) :- regle_applicable(X, Regles, R), !.
@@ -203,6 +224,7 @@ choix_equation([X|P], Q, E,[R1|Regles],R) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Choix_pondere_1 (Exemple du sujet)
 % Poids des regles 
+% on donne maintenant un poids à chaque règle selon le modèle suivant :
 % clash; check > rename; simplify > orient > decompose > expand
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -215,6 +237,7 @@ choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Choix_pondere_2
 % Poids des regles
+% on donne maintenant un poids à chaque règle selon le 2eme modèle suivant :
 % clash; check > decompose; simplify > orient; expand > rename
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -229,6 +252,7 @@ choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename], R), !.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % choix_premier, aucun poids sur les regles
+unifie([],_) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
 unifie([X|P],choix_premier):- unifie([X|P]), !.
 
 % Applique la strategie S pour l'algorithme
@@ -257,12 +281,12 @@ unif(P, S) :- clr_echo, unifie(P, S).
 
 %appelle unifie apres avoir active les affichages, affiche "Yes" si on peut unifier "No" sinon (il n'y a donc pas d'echec de la procedure.
 trace_unif(P, S) :- set_echo, unifie(P,S).
-trace_unif(P,S) :- set_echo, (unifie(P, S), echo('Yes'), ! ;	
-		echo('No') ) .
+%trace_unif(P,S) :- set_echo, (unifie(P, S), echo('Yes'), ! ;	
+%		echo('No') ) .
 
 % PREDICATS POUR L AFFICHAGE
-aff_syst(W) :- echo('\nSystem: '),echo(W),echo('\n').
-aff_regle(R,E) :- echo(R),echo(': '),echo(E),echo('\n\n').
+aff_syst(W) :- echo('system: '), echoln(W).
+aff_regle(R,E) :- echo(R),echo(': '),echo(E),echoln('').
 
 % +----------------------------------------------------------------------------+
 % Lancement du programme
