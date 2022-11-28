@@ -286,7 +286,7 @@ trace_unif(P, S) :- set_echo, unifie(P,S).
 
 % PREDICATS POUR L AFFICHAGE
 aff_syst(W) :- echo('system: '), echoln(W).
-aff_regle(R,E) :- echo(R),echo(': '),echo(E),echoln('').
+aff_regle(R,E) :- echo(R),echo(': '),echoln(E).
 
 % +----------------------------------------------------------------------------+
 % Lancement du programme
