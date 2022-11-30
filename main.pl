@@ -15,9 +15,6 @@ clr_echo :- retractall(echo_on).
 echo(T) :- echo_on, !, write(T).
 echo(_).
 
-echoln(T) :- echo_on, echo(T), nl.
-echoln(_).
-
 :- set_echo.
 
 % Retire les warnings
@@ -219,6 +216,9 @@ choix_equation([X|P],Q,E,[R1|Regles],R):-
 choix_equation([X|P], Q, E,[R1|Regles],R) :-
 	choix_equation(P, Q, E,[R1|Regles],R), !.
 
+
+choix_premier([X|P],Q,E,R) :- regle(E,R), aff_regle(R,E), !, reduit(R,E,P,Q).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Liste des "Strategies"
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -253,7 +253,7 @@ choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename], R), !.
 
 % choix_premier, aucun poids sur les regles
 unifie([],_) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
-unifie([X|P],choix_premier):- unifie([X|P]), !.
+unifie([X|P],choix_premier):- aff_syst([X|P]), choix_premier([X|P],Q,X,_), !, unifie(Q, choix_premier).
 
 % Applique la strategie S pour l'algorithme
 unifie(P,S) :-
@@ -279,19 +279,18 @@ unifie(P,S) :-
 %appelle unifie apres avoir desactive les affichages 
 unif(P, S) :- clr_echo, unifie(P, S).
 
-%appelle unifie apres avoir active les affichages, affiche "Yes" si on peut unifier "No" sinon (il n'y a donc pas d'echec de la procedure.
+%appelle unifie apres avoir active les affichages
 trace_unif(P, S) :- set_echo, unifie(P,S).
-%trace_unif(P,S) :- set_echo, (unifie(P, S), echo('Yes'), ! ;	
-%		echo('No') ) .
+
 
 % PREDICATS POUR L AFFICHAGE
-aff_syst(W) :- echo('system: '), echoln(W).
-aff_regle(R,E) :- echo(R),echo(': '),echoln(E).
+aff_syst(W) :- echo('\nsystem: '), echo(W), echo('\n').
+aff_regle(R,E) :- echo(R),echo(': '),echo(E).
 
 % +----------------------------------------------------------------------------+
 % Lancement du programme
-%:- initialization
-%        manual.
+:- initialization
+        manual.
 
 
 manual :- write("Unification Martelli-Montanari\n"),
