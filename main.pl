@@ -109,9 +109,11 @@ occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats annexes
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 % reduit(R,E,P,Q) : transforme le système d'équations P en le système d'équations Q par application de la règle de transformation R à l'équation E
 % E est représenté par X ?= T.
+
+%Reduit au silence les warnings
+:- discontiguous reduit/4.
 
 % Predicat reduit pour la regle rename
 reduit(rename, X ?= T, P, Q) :-
