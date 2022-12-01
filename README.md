@@ -8,4 +8,8 @@ installer online (Win, MacOS) : http://www.swi-prolog.org/download/stable
 `swipl main.pl -- [args]`
 
 `?- trace_unif(<P>,<S>)`<br/> pour executer l'algo avec les traces.<br/>
-`?- unif(<P>,<S>)`<br/> pour executer l'algo sans trace.
+`?- unif(<P>,<S>)`<br/> pour executer l'algo sans trace.<br/><br/>
+
+Pour lancer la procedure de tests : <br/>
+`?- consult(tests).` 
+`?- run_tests.`
