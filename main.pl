@@ -33,6 +33,13 @@ echo(_).
 %%regle(E, R) : Determine la regle de transformation R qui s'applique a l'equation E.
 %%----- Def des conditions sur les regles -----%
 
+% Règle clean qui permet d'enlever une équation composée 
+% des deux mêmes termes, telles que X ?= X, a ?= a, f(a) ?= f(a)
+%
+% Ce prédicat ne figure pas dans les règles de bases, mais
+% a été ajouté suite à la découverte des cas présentés.
+regle(X?=T, clean) :- X == T,!.
+
 /*
  * Renommage d une variable
  * Regle rename : renvoie true si X et T sont des variables.
@@ -114,6 +121,9 @@ occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,
 
 %Reduit au silence les warnings
 :- discontiguous reduit/4.
+
+% Predicat reduit pour la regle clean enlever une équation telle que X ?= X, où a ?= a.
+reduit(clean, _, P, Q) :- Q = P, !.
 
 % Predicat reduit pour la regle rename
 reduit(rename, X ?= T, P, Q) :-
@@ -230,7 +240,7 @@ choix_premier([X|P],Q,E,R) :- regle(E,R), aff_regle(R,E), !, reduit(R,E,P,Q).
 % clash; check > rename; simplify > orient > decompose > expand
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [check, clash], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [clean, check, clash], R), !.
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [decompose], R), !.
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [rename, simplify], R), !.
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [orient], R), !.
@@ -245,7 +255,7 @@ choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
 
 choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [orient,expand], R), !.
 choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [decompose, simplify], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [check, clash], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [clean, check, clash], R), !.
 choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename], R), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
