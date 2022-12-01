@@ -117,7 +117,7 @@ occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,
 
 % Predicat reduit pour la regle rename
 reduit(rename, X ?= T, P, Q) :-
-	elimination(X ?= T, P, Q), 
+	elimination(X ?= T, P,Q), 
 	!.
 
 % Predicat reduit pour la regle expand
@@ -240,14 +240,13 @@ choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
 % Choix_pondere_2
 % Poids des regles
 % on donne maintenant un poids à chaque règle selon le 2eme modèle suivant :
-% clash; check > decompose; simplify > orient; expand > rename
+% orient; expand > decompose; simplify > clash; check > rename
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [check, clash], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [decompose, simplify], R), !.
 choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [orient,expand], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [decompose, simplify], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [check, clash], R), !.
 choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename], R), !.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats pour unifier
