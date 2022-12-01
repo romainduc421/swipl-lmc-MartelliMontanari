@@ -237,7 +237,7 @@ choix_premier([X|P],Q,E,R) :- regle(E,R), aff_regle(R,E), !, reduit(R,E,P,Q).
 % Choix_pondere_1 (Exemple du sujet)
 % Poids des regles 
 % on donne maintenant un poids à chaque règle selon le modèle suivant :
-% clash; check > rename; simplify > orient > decompose > expand
+% clean; clash; check > rename; simplify > orient > decompose > expand
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [clean, check, clash], R), !.
@@ -247,10 +247,10 @@ choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [orient], R), !.
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Choix_pondere_2
+% Choix_pondere_2 
 % Poids des regles
 % on donne maintenant un poids à chaque règle selon le 2eme modèle suivant :
-% orient; expand > decompose; simplify > clash; check > rename
+% orient; expand > decompose; simplify > clean; clash; check > rename
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [orient,expand], R), !.
