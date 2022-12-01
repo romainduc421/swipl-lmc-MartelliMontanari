@@ -230,6 +230,7 @@ choix_equation([X|P], Q, E,[R1|Regles],R) :-
 
 
 choix_premier([X|P],Q,E,R) :- regle(E,R), aff_regle(R,E), !, reduit(R,E,P,Q).
+choix_dernier(P, L, E, R) :- reverse(P, [E|L]), regle(E, R), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Liste des "Strategies"
@@ -241,22 +242,24 @@ choix_premier([X|P],Q,E,R) :- regle(E,R), aff_regle(R,E), !, reduit(R,E,P,Q).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [clean, check, clash], R), !.
-choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [decompose], R), !.
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [rename, simplify], R), !.
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [orient], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [decompose], R), !.
 choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Choix_pondere_2 
 % Poids des regles
 % on donne maintenant un poids à chaque règle selon le 2eme modèle suivant :
-% orient; expand > decompose; simplify > clean; clash; check > rename
+% clash; check > orient > decompose > rename; simplify > expand > clean
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [orient,expand], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [decompose, simplify], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [clean, check, clash], R), !.
-choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [clash, check], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [orient], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [decompose], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename, simplify], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [clean], R), !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats pour unifier
@@ -265,6 +268,8 @@ choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename], R), !.
 % choix_premier, aucun poids sur les regles
 unifie([],_) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
 unifie([X|P],choix_premier):- aff_syst([X|P]), choix_premier([X|P],Q,X,_), !, unifie(Q, choix_premier).
+unifie(P, choix_dernier):-
+	aff_syst(P),choix_dernier(P, P2, E, R), aff_regle(R,E), reduit(R, E, P2,Q), !,unifie(Q,choix_dernier).
 
 % Applique la strategie S pour l'algorithme
 unifie(P,S) :-
@@ -307,8 +312,5 @@ aff_regle(R,E) :- echo(R),echo(': '),echo(E).
 manual :- write("Unification Martelli-Montanari\n"),
 		write("\n\nUtilisez trace_unif(P,S) pour executer l'algorithme de Martelli-Montanari avec les traces d'execution a chaque etape."),
 		write("\nUtilisez unif(P,S) pour executer l'algorithme de Martelli-Montanari sans les traces d'execution."),
-		write("\nP est le systeme a unifier. S represente une strategie a employer: choix_premier, choix_pondere_1, choix_pondere_2."),
+		write("\nP est le systeme a unifier. S represente une strategie a employer: choix_premier, choix_pondere_1, choix_pondere_2, choix_dernier."),
 		set_echo, !.
-
-
-

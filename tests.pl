@@ -1,4 +1,5 @@
 include(main).
+:- consult(main).
 :- style_check(-singleton).
 %test rules
 
@@ -156,10 +157,10 @@ test(unifie, [forall(member(STRATEGY ,[choix_premier, choix_pondere_1, choix_pon
     unifie([f(X,Y)?= f(g(Z), h(a)), Z ?= f(Y)], STRATEGY).
 test(unifie, [forall(member(STRATEGY ,[choix_premier, choix_pondere_1, choix_pondere_2])), fail]) :- 
     unifie([f(X,Y)?= f(g(Z), h(a)), Z ?= f(Y), X ?= f(X)], STRATEGY).
-test(unifie,[forall(member(STRATEGY,[choix_premier]))]) :- 
+test(unifie,[forall(member(STRATEGY,[choix_premier, choix_pondere_2]))]) :- 
    unifie([p(g(u,Z),X,Z) ?= p(X,g(Y,Z),b)],STRATEGY).
 
-test(unifie,[forall(member(STRATEGY,[choix_pondere_1, choix_pondere_2])), fail]) :- 
+test(unifie,[forall(member(STRATEGY,[choix_pondere_1])), fail]) :- 
    unifie([p(g(u,Z),X,Z) ?= p(X,g(Y,Z),b)],STRATEGY).
 test(unifie,[forall(member(STRATEGY ,[choix_premier, choix_pondere_1,choix_pondere_2])), fail]) :-
    unifie([p(X,f(X),h(f(X),X)) ?= p(Z,f(f(a)),h(f(g(a,Z)),v))],STRATEGY).

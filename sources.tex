@@ -1,0 +1,553 @@
+\documentclass[10pt,a4paper]{report}
+
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[iso-8859-1]{inputenx}
+
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{lipsum}
+\usepackage{setspace}
+
+
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+
+
+%%configuration de listings
+\lstset{
+language=Prolog,
+basicstyle=\ttfamily\small, %
+identifierstyle=\color{black}, %
+keywordstyle=\color{teal}, %
+numberstyle=\color{green},
+stringstyle=\color{black!64}, %
+commentstyle=\it\color{gray}, %
+columns=flexible, %
+tabsize=2, %
+extendedchars=true, %
+showspaces=false, %
+showstringspaces=false, %
+numbers=left, %
+numberstyle=\tiny, %
+breaklines=true, %
+breakautoindent=true, %
+captionpos=b,
+backgroundcolor=\color{lightgray!5},
+captionpos = b 
+}
+
+\definecolor{Zgris}{rgb}{0.87,0.85,0.85}
+\newcommand{\HRule}{\rule{\linewidth}{1mm}}
+\newsavebox{\BBbox}
+\newenvironment{DDbox}[1]{
+\begin{lrbox}{\BBbox}\begin{minipage}{\linewidth}}
+{\end{minipage}\end{lrbox}\noindent\colorbox{Zgris}{\usebox{\BBbox}} \\
+[.5cm]}
+
+% Redefine the plain page style
+
+%\headsep = 25pt
+
+\fancypagestyle{plain}{%
+  \fancyhf{}
+%header
+  \fancyhead[L]{Annexes}
+  \fancyhead[R]{\ifnum\value{part}>0 \partname\ \thepart \fi}
+  \renewcommand{\headrulewidth}{0.4pt}% Line at the header visible
+%footer
+  \fancyfoot[L]{Serratore Alexandre, Duc Romain}
+  \fancyfoot[C]{\thepage}
+  \fancyfoot[R]{\today}%
+  \renewcommand{\footrulewidth}{0.4pt}% Line at the footer visible
+}
+
+
+ \geometry{
+ a4paper,
+ total={210mm,297mm},
+ left=20mm,
+ right=20mm,
+ top=20mm,
+ bottom=20mm,
+ }
+
+
+
+
+\begin{document}
+\section{Annexes}
+
+Les sources de ce projet sont divisees en 2 fichiers. Le fichier principal est le fichier $main.pl$, il contient le programme demande. Le second fichier est le fichier $tests.pl$ qui contient les tests unitaires que nous avons crees pour s'assurer que notre programme faisait bien le travail voulu, notamment les predicats $regle$, $reduit$ et $unifie$. Les tests se lance avec le predicat $run\_tests. $ . Les sources sont aussi consultables en ligne a l'adresse \url{www.github.com/romainduc421/swipl-lmc-MartelliMontanari/} .
+
+\subsection{projet}
+\begin{lstlisting}[caption ={le fichier main.pl}]
+% Definition de l'operateur "?=".
+:- op(20,xfy,?=).
+
+% Predicats d'affichage fournis
+
+% set_echo: ce predicat active l'affichage par le predicat echo
+set_echo :- assert(echo_on).
+
+% clr_echo: ce predicat inhibe l'affichage par le predicat echo
+clr_echo :- retractall(echo_on).
+
+% echo(T): si le flag echo_on est positionne, echo(T) affiche le terme T
+%          sinon, echo(T) reussit simplement en ne faisant rien.
+
+echo(T) :- echo_on, !, write(T).
+echo(_).
+
+:- set_echo.
+
+% Retire les warnings
+:- style_check(-singleton).
+
+% +--------------------------------------------------------------+
+%%%%%Question 1
+% +--------------------------------------------------------------+
+
+%%regle(E, R) : Determine la regle de transformation R qui s'applique a l'equation E.
+%%----- Def des conditions sur les regles -----%
+
+% Regle clean qui permet d'enlever une equation composee 
+% des deux memes termes, telles que X ?= X, a ?= a, f(a) ?= f(a)
+%
+% Ce predicat ne figure pas dans les regles de bases, mais
+% a ete ajoute suite a la decouverte des cas presentes.
+regle(X?=T, clean) :- X == T,!.
+
+/*
+ * Renommage d une variable
+ * Regle rename : renvoie true si X et T sont des variables.
+ * E : equation donnee.
+ * R : regle rename.
+ */
+regle(X?=T,rename) :- var(X), var(T), !.
+	 
+/*
+ * Simplification de constante
+ * Regle simplify : renvoie true si X est une variable et A une
+ * constante.
+ * E : equation donnee.
+ * R : regle simplify.
+ */
+regle(X?=T,simplify) :- var(X), atomic(T), !.
+
+/*
+ * Unification d'une variable avec un terme compose
+ * Regle expand : renvoie true si X est une variable, T un terme
+ * compose et si X n'est pas dans T.
+ * E : equation donnee.
+ * R : regle expand.
+ */	
+regle(X?=T,expand) :- var(X), compound(T), \+occur_check(X,T), !.
+
+/*
+ * Verification de presence d occurrence
+ * Regle check : renvoie true si X et T sont differents et si X est dans
+ * T.
+ * E : equation donnee.
+ * R : regle check.
+ */	
+regle(X?=T,check) :- \+X==T, occur_check(X,T), !.
+
+/*
+ * Echange
+ * Regle orient : renvoie true si T n'est pas une variable et si X en
+ * est une.
+ * E : equation donnee.
+ * R : regle orient.
+ */
+regle(T?=X,orient) :- nonvar(T), var(X), !.
+
+/*
+ * Decomposition de deux fonctions
+ * Regle decompose : renvoie true si X et T sont des termes composes et
+ * s'ils ont le meme nombre d'arguments et le meme nom.
+ * E : equation donnee.
+ * R : regle decompose.
+ */	
+regle(X?=T,decompose) :- compound(X), compound(T), functor(X,F1,A1), functor(T,F2,A2), F1==F2, A1==A2, !.
+
+/*
+ * Gestion de conflit entre deux fonctions
+ * Regle clash : renvoie true si X et T sont des termes composes (n'ont pas le meme symbole) et
+ * s'ils n'ont pas le meme nombre d'arguments.
+ * E : equation donnee.
+ * R : regle clash.
+ */
+regle(X?=T,clash) :- compound(X), compound(T), functor(X,N,A), functor(T,M,B), not( ( N==M , A==B ) ), !.
+
+% occur_check(V,T): teste si la variable V apparait dans le terme T
+occur_check(V,T) :- var(V), compound(T), arg(_,T,X), compound(X), occur_check(V,X), !;
+					var(V), compound(T), arg(_,T,X), V==X, !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Predicats annexes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% reduit(R,E,P,Q) : transforme le systeme d'equations P en le systeme d'equations Q par application de la regle de transformation R a l'equation E
+% E est represente par X ?= T.
+
+%Reduit au silence les warnings
+:- discontiguous reduit/4.
+
+% Predicat reduit pour la regle clean enlever une equation telle que X ?= X, ou a ?= a.
+reduit(clean, _, P, Q) :- Q = P, !.
+
+% Predicat reduit pour la regle rename
+reduit(rename, X ?= T, P, Q) :-
+	elimination(X ?= T, P,Q), 
+	!.
+
+% Predicat reduit pour la regle expand
+reduit(expand, X ?= T, P, Q) :-
+	elimination(X ?= T, P,Q), 
+	!.
+
+
+% Predicat reduit pour la regle simplify
+reduit(simplify, X ?= T, P, Q) :-
+	elimination(X ?= T, P, Q), 
+	!.
+	
+% Predicat elimination permettant d appliquer l unification necessaire
+% aux regles rename, expand, simplify
+elimination(X ?= T, P, Q) :-
+	X = T,	% Unification avec la nouvelle valeur de X
+	Q = P, 	% Q devient le reste du programme
+	!.	
+
+% Predicat reduit permettant d'appliquer la regle de decomposition de deux fonctions sur l equation E
+reduit(decompose, Fonct1?= Fonct2, P, Q) :-
+	functor(Fonct1, _, A),		% recuperer le nombre d'arguments
+	decompose(Fonct1, Fonct2, A, Liste), % recuperer les nouvelles eq
+	append(Liste,P,Q), % ajout des eq dans le prog P
+	!.		
+
+% Predicat de decomposition, cas ou l'argument des 2 fct 
+% parcourues est 0 (arret de la recursion)	
+decompose(_,_,0,_) :-
+	!.
+% Predicat de decomposition, on prend deux fct et on recupere le 
+% ieme argument afin d ajouter l equation Arg1 ?= Arg2 au programme
+decompose(Fonct1, Fonct2, A, Liste) :-
+	% on decremente le no de l'argument parcouru
+	New is A - 1,		
+	% ajout de l'equation liee au (i-1) -ieme argument
+	decompose(Fonct1, Fonct2, New, Res),
+	% obtention de l'argument courant pour les deux fct
+	arg(A, Fonct1, Arg1),
+	arg(A, Fonct2, Arg2),
+	% ajout de l'eq arg1 ?= arg2
+	append(Res, [Arg1 ?= Arg2], Liste), 
+	!.
+
+% Predicat reduit pour la regle orient, le predicat prend l equation E et l inverse
+% puis l ajoute au programme P, le resultat est alors stocke dans Q
+reduit(orient, T ?= X, P, Q) :-
+	% ajout de l'equation inversee dans P
+	append([X ?= T], P, Q), !.
+	
+% facultatifs (systeme dequation est incorrect)
+%occurence
+reduit(check, _, _, bottom) :- fail.
+%gestion de conflits
+reduit(clash, _, _, bottom) :- fail.
+
+% Predicat unifie(P)
+% % Unifie sans strategie (Question 1)
+unifie([]) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
+
+unifie([X|P]) :-
+	aff_syst([X|P]),
+	regle(X,R),
+	aff_regle(R,X),
+	reduit(R,X,P,Q), !, unifie(Q).
+
+
+% +--------------------------------------------------------------+
+%%%%%Question 2
+% +--------------------------------------------------------------+
+
+% Predicats annexes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Permet d'extraire un element d'une liste.
+extraction( _, [], []).
+extraction( R, [R|T], T).
+extraction( R, [H|T], [H|T2]) :- H \= R, extraction( R, T, T2).
+
+% Permet de tester l'applicabilite des regles de la liste "Regles" sur l'equation X.
+% Cherche la regle R que l'on peut appliquer dans une liste de regles Regles a une liste d'equations d'unification X
+% R1 est le premier element de la liste "Regles"
+regle_applicable(X, [R1|Regles], R) :- regle(X,R1), R = R1, !.
+regle_applicable(X, [R1|Regles], R) :- regle_applicable(X, Regles, R), !.
+
+% Permet de choisir sur quelle equation appliquer les regles dans la liste Regles
+choix_equation([X|P],Q,E,[R1|Regles],R):-
+	regle_applicable(X, [R1|Regles], R), E = X, !.
+choix_equation([X|P], Q, E,[R1|Regles],R) :-
+	choix_equation(P, Q, E,[R1|Regles],R), !.
+
+
+choix_premier([X|P],Q,E,R) :- regle(E,R), aff_regle(R,E), !, reduit(R,E,P,Q).
+choix_dernier(P, L, E, R) :- reverse(P, [E|L]), regle(E, R), !.
+
+% Liste des "Strategies"
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Choix_pondere_1 (Exemple du sujet)
+% Poids des regles 
+% on donne maintenant un poids a chaque regle selon le modele suivant :
+% clean; clash; check > rename; simplify > orient > decompose > expand
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [clean, check, clash], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [rename, simplify], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [orient], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [decompose], R), !.
+choix(choix_pondere_1, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Choix_pondere_2 
+% Poids des regles
+% on donne maintenant un poids a chaque regle selon le 2eme modele suivant :
+% clash; check > orient > decompose > rename; simplify > expand > clean
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [clash, check], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [orient], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [decompose], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [rename, simplify], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [expand], R), !.
+choix(choix_pondere_2, P,Q,E,R) :- choix_equation(P, Q, E, [clean], R), !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Predicats pour unifier
+
+% choix_premier, aucun poids sur les regles
+unifie([],_) :- echo("\nUnification terminee."), echo("Resultat: \n\n"),!.
+unifie([X|P],choix_premier):- aff_syst([X|P]), choix_premier([X|P],Q,X,_), !, unifie(Q, choix_premier).
+unifie(P, choix_dernier):-
+	aff_syst(P),choix_dernier(P, P2, E, R), aff_regle(R,E), reduit(R, E, P2,Q), !,unifie(Q,choix_dernier).
+
+% Applique la strategie S pour l'algorithme
+unifie(P,S) :-
+	aff_syst(P), %On affiche le systeme
+	choix(S, P, Q, E, R), %On effectue le choix de la regle a appliquer + sur quelle equation
+	aff_regle(R,E), %On affiche la regle utilisee.
+	regle(E,R), %On applique la regle.
+	extraction(E, P, U), %On extrait l'element
+	reduit(R,E,U,Q), %On applique reduit
+	unifie(Q, S),  %Recursion
+	!.
+
+% +--------------------------------------------------------------+
+%%%%%Question 3
+% +--------------------------------------------------------------+
+
+%appelle unifie apres avoir desactive les affichages 
+unif(P, S) :- clr_echo, unifie(P, S).
+
+%appelle unifie apres avoir active les affichages
+trace_unif(P, S) :- set_echo, unifie(P,S).
+
+
+% PREDICATS POUR L AFFICHAGE
+aff_syst(W) :- echo('\nsystem: '), echo(W), echo('\n').
+aff_regle(R,E) :- echo(R),echo(': '),echo(E).
+
+% +--------------------------------------------------------------+
+% Lancement du programme
+:- initialization
+        manual.
+
+
+manual :- write("Unification Martelli-Montanari\n"),
+		write("\n\nUtilisez trace_unif(P,S) pour executer l'algorithme de Martelli-Montanari avec les traces d'execution a chaque etape."),
+		write("\nUtilisez unif(P,S) pour executer l'algorithme de Martelli-Montanari sans les traces d'execution."),
+		write("\nP est le systeme a unifier. S represente une strategie a employer: choix_premier, choix_pondere_1, choix_pondere_2, choix_dernier."),
+		set_echo, !.
+\end{lstlisting}
+\subsection{tests}
+\begin{lstlisting}[caption ={le fichier test.pl}]
+include(main).
+:- consult(main).
+:- style_check(-singleton).
+%test rules
+
+:- begin_tests(regle).
+%rename
+test(rename) :- regle(X ?= T, R). %R = rename
+test(rename, [fail]) :- regle(X ?= a, rename).
+test(rename, [fail]) :- regle(X ?= f(a), rename).
+test(rename, [fail]) :- regle(X ?= f(X), rename).
+
+%simplify
+test(simplify) :- regle(X ?=t, R). %R = simplify
+test(simplify) :- regle(X?=a, simplify). %true
+test(simplify, [fail]) :- regle(X?=f(a), simplify).
+test(simplify, [fail]) :- regle(X ?= f(X), simplify).
+
+%check
+test(check) :- regle(X?=f(X),R).  %R = check.
+test(check, [fail]):- regle(X ?= a, check).
+test(check, [fail]):- regle(X ?= f(a), check).
+test(check):- regle(X ?= f(X), check).  %true
+
+%orient
+test(orient) :- regle(t ?= X, R).   %R = orient
+test(orient) :- regle(t ?= X, orient).  %true
+test(orient, [fail]) :- regle(X ?= f(a), orient).
+test(orient, [fail]) :- regle(X ?= a, orient).
+
+%decompose
+test(decompose) :- regle(f(t) ?= f(X), R).  %R = decompose
+test(decompose, [fail]) :- regle(f(X) ?= X, decompose).
+test(decompose, [fail]) :- regle(f(X) ?= f(X, Y), decompose).
+test(decompose) :- regle(f(X) ?= f(a), decompose).  %true
+test(decompose, [fail]) :- regle(f(X) ?= g(Y), decompose).
+
+%clash
+test(clash) :- regle(f(t) ?= g(X, a), R).   %R = clash
+test(clash, [fail]) :- regle(f(X) ?= X, clash).
+test(clash) :- regle(f(X) ?= f(X, Y), clash).   %true
+test(clash, [fail]):- regle(f(X) ?= f(a), clash).
+test(clash) :- regle(f(X) ?= g(Y), clash).  %true
+
+%expand
+test(expand) :- regle(X?=f(a,b),expand).    %true
+test(expand, [fail]) :- regle(X?=f(a,b,X),expand).
+test(expand, [fail]) :- regle(X?=f(f(a),b,X),expand).
+test(expand, [fail]) :- regle(X?=f(f(X,b,a),b,a),expand).
+test(expand) :- regle(X?=f(f(Y,b,a),b,a),expand).   %true
+test(expand, [fail]) :- regle(X?=f(g(X,b,a),b,a),expand).
+test(expand, [fail]) :- regle(X?=f(g(h(X),b,a),b,a),expand).
+test(expand) :- regle(X?=f(g(h(Y),b,a),b,a),expand).    %true
+
+:- end_tests(regle).
+
+%%tests reduit
+:- begin_tests(reduit).
+
+%rename
+test(rename) :- reduit(rename, X ?= T, [], Q).
+/* X = T,
+Q = [].
+*/
+test(rename) :- reduit(rename, X ?= T, [f(X) ?= X], Q).
+/* X = T,
+Q = [f(T)?=T].
+*/
+
+%simplify
+test(simplify) :- reduit(simplify, X ?= t, [], Q).
+/* X = t,
+Q = [].
+*/
+test(simplify) :- reduit(simplify, X ?= t, [f(X) ?= X], Q).
+/* X = t,
+Q = [f(t)?=t].
+*/
+
+%expand
+test(expand) :- reduit(expand, X ?= f(t), [], Q).
+/* X = f(t),
+Q = [].
+*/
+test(expand) :- reduit(expand, X ?= f(t), [f(X) ?= X], Q).
+/* X = f(t),
+Q = [f(f(t))?=f(t)].
+*/
+
+%check
+test(check, [fail]) :- reduit(check, X ?= f(t, Y, X, k), [f(X) ?= X], Q).
+%Q = bottom.
+test(check, [fail]) :- reduit(check, X ?= f(t, Y, X, k), [], Q).
+%Q = bottom.
+
+%orient
+test(orient) :- reduit(orient, t ?= X, [f(X) ?= X], Q).
+%Q = [X?=t, f(X)?=X].
+test(orient) :- reduit(orient, t ?= X, [], Q).
+%Q = [X?=t].
+
+%clash
+test(clash, [fail]) :- reduit(clash, f(t) ?= f(X, m), [], Q).
+%Q = bottom.
+test(clash, [fail]) :- reduit(clash, f(t) ?= g(X), [f(X) ?= X], Q).
+%Q = bottom.
+test(clash, [fail]) :- reduit(clash, f(t) ?= g(X), [], Q).
+%Q = bottom.
+
+%decompose
+test(decompose):- reduit(decompose, f(t) ?= f(X), [f(X) ?= X], Q).
+%Q = [t?=X, f(X)?=X].
+test(decompose):- reduit(decompose, f(t, C, X) ?= f(X, k, Y), [], Q).
+%Q = [t?=X, C?=k, X?=Y].
+:- end_tests(reduit).
+
+%% tests unifie
+:- begin_tests(unifiebase_).
+test(unifie) :- unifie([f(X,Y) ?= f(g(Z),h(a)), Z ?= f(Y)]).
+/* trace_unif([f(X,Y) ?= f(g(Z),h(a)), Z ?= f(Y)], choix_premier).
+
+system: [f(_396,_398)?=f(g(_402),h(a)),_402?=f(_398)]
+decompose: f(_396,_398)?=f(g(_402),h(a))
+system: [_396?=g(_402),_398?=h(a),_402?=f(_398)]
+expand: _396?=g(_402)
+system: [_398?=h(a),_402?=f(_398)]
+expand: _398?=h(a)
+system: [_402?=f(h(a))]
+expand: _402?=f(h(a))
+Unification terminee.Resultat: 
+
+X = g(f(h(a))),
+Y = h(a),
+Z = f(h(a)).
+*/
+
+test(unifie, [fail]) :- unifie([f(X,Y) ?= f(g(Z),h(a)), Z ?= f(X)]).
+
+:- end_tests(unifiebase_).
+
+/* trace_unif([f(X,Y) ?= f(g(Z),h(a)), Z ?= f(X)], choix_premier).
+
+system: [f(_8,_10)?=f(g(_14),h(a)),_14?=f(_8)]
+decompose: f(_8,_10)?=f(g(_14),h(a))
+system: [_8?=g(_14),_10?=h(a),_14?=f(_8)]
+expand: _8?=g(_14)
+system: [_10?=h(a),_14?=f(g(_14))]
+expand: _10?=h(a)
+system: [_14?=f(g(_14))]
+check: _14?=f(g(_14))
+system: [_14?=f(g(_14))]
+false.
+*/
+
+:- begin_tests(unifie_).
+test(unifie, [forall(member(STRATEGY ,[choix_premier, choix_pondere_1, choix_pondere_2]))]) :- 
+    unifie([f(X,Y)?= f(g(Z), h(a)), Z ?= f(Y)], STRATEGY).
+test(unifie, [forall(member(STRATEGY ,[choix_premier, choix_pondere_1, choix_pondere_2])), fail]) :- 
+    unifie([f(X,Y)?= f(g(Z), h(a)), Z ?= f(Y), X ?= f(X)], STRATEGY).
+test(unifie,[forall(member(STRATEGY,[choix_premier, choix_pondere_2]))]) :- 
+   unifie([p(g(u,Z),X,Z) ?= p(X,g(Y,Z),b)],STRATEGY).
+
+test(unifie,[forall(member(STRATEGY,[choix_pondere_1])), fail]) :- 
+   unifie([p(g(u,Z),X,Z) ?= p(X,g(Y,Z),b)],STRATEGY).
+test(unifie,[forall(member(STRATEGY ,[choix_premier, choix_pondere_1,choix_pondere_2])), fail]) :-
+   unifie([p(X,f(X),h(f(X),X)) ?= p(Z,f(f(a)),h(f(g(a,Z)),v))],STRATEGY).
+
+:- end_tests(unifie_).
+\end{lstlisting}
+\end{document}
