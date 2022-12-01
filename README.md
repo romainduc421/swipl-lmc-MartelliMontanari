@@ -11,5 +11,5 @@ installer online (Win, MacOS) : http://www.swi-prolog.org/download/stable
 `?- unif(<P>,<S>)`<br/> pour executer l'algo sans trace.<br/><br/>
 
 Pour lancer la procedure de tests : <br/>
-`?- consult(tests).` 
+`?- consult(tests).` <br/>
 `?- run_tests.`

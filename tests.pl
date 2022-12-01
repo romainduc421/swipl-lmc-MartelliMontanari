@@ -1,4 +1,5 @@
 include(main).
+:- style_check(-singleton).
 %test rules
 
 :- begin_tests(regle).
